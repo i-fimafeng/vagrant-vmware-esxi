@@ -58,12 +58,14 @@ module VagrantPlugins
 
             # Find a tar/bsdtar
             if system 'tar --version >/dev/null 2>&1'
-              tar_cmd = 'tar'
+              tar_cmd = 'cd #{tmpdir}/#{boxname} ; tar cvf ../../#{boxname}.box *'
             elsif system 'bsdtar --version >/dev/null 2>&1'
-              tar_cmd = 'bsdtar'
+              tar_cmd = 'cd #{tmpdir}/#{boxname} ; bsdtar cvf ../../#{boxname}.box *'
+            elsif system 'powershell -NoLogo -NoProfile -Command "Write-Host $PSVersionTable.PSVersion"'
+              tar_cmd = "powershell -NoLogo -NoProfile -Command \"cd #{tmpdir}/#{boxname} ; Compress-Archive -Path * -DestinationPath ../../#{boxname}.zip; Rename-Item ../../#{boxname}.zip -NewName #{boxname}.box\" "
             else
               raise Errors::ESXiConfigError,
-                    message: 'unable to find tar in your path.'
+                    message: 'unable to find tar or powershell in your path.'
             end
 
             # Check if user files and Vagrantfile exists
@@ -119,8 +121,8 @@ module VagrantPlugins
               end
             end
 
-            env[:ui].info("tarring #{boxname}.box")
-            unless system "cd #{tmpdir}/#{boxname} ; #{tar_cmd} cvf ../../#{boxname}.box *"
+            env[:ui].info("tarring #{boxname}.box : #{tar_cmd}")
+            unless system tar_cmd
               raise Errors::GeneralError,
                     message: 'tar command failed.'
             end
